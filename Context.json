@@ -1,0 +1,28 @@
+{
+  "project_metadata": {
+    "name": "Software Testing Tool",
+    "target_language": "Python",
+    "version": "1.0"
+  },
+  "detailed_specifications": [
+    {
+      "feature": "Recursive Parser",
+      "requirement": "The tool must traverse all subdirectories and identify every class and function in the source code.",
+      "expected_behavior": "Return a list of file paths and function names while excluding libraries like node_modules or venv."
+    },
+    {
+      "feature": "Whitebox Generation",
+      "requirement": "Generate test cases for Statement and Condition coverage.",
+      "expected_behavior": "Produce code that executes every line and evaluates every logical branch at least once."
+    },
+    {
+      "feature": "Blackbox Generation",
+      "requirement": "Generate tests using Boundary Value Analysis (BVA) and Equivalence Class Partitioning (ECP).",
+      "expected_behavior": "Input sets that test the extreme limits and representative groups of data defined in these specs."
+    }
+  ],
+  "output_configuration": {
+    "test_folder_name": "Test_Folder",
+    "automation_file_type": "GitHub Actions YAML"
+  }
+}
