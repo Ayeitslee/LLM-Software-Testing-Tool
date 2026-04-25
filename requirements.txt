@@ -1,0 +1,5 @@
+openai: This is the library you'll use to connect your main.py server to the LLM that generates the tests
+
+python-dotenv: This allows you to store your API keys in a separate .env file so they stay private and don't get accidentally pushed to GitHub
+
+ast: To confirm your use of Abstract Syntax Trees for code analysis.
