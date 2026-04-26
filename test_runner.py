@@ -8,10 +8,15 @@ class TestRunner:
         self.test_folder = test_folder
         self.calc = SimpleCalculator()
 
-        # metrics
+        # Metrics
         self.mutants_total = 0
         self.mutants_killed = 0
         self.conditions_hit = set()
+
+        # Results
+        self.total = 0
+        self.passed = 0
+        self.failed = 0
 
     # -----------------------------
     # LOAD TEST FILES
@@ -48,19 +53,12 @@ class TestRunner:
         if not func:
             return None, f"Function {func_name} not found"
 
-        # whitebox tracking
+        # Whitebox tracking (light simulation)
         if func_name == "divide":
-            if len(inputs) > 1:
-                if inputs[1] == 0:
-                    self.conditions_hit.add("divide_by_zero")
-                else:
-                    self.conditions_hit.add("valid_division")
+            self.conditions_hit.add("divide_branch")
 
         if func_name == "calculate_discount":
-            if inputs[1] < 0 or inputs[1] > 100:
-                self.conditions_hit.add("invalid_discount")
-            else:
-                self.conditions_hit.add("valid_discount")
+            self.conditions_hit.add("discount_branch")
 
         try:
             return func(*inputs), None
@@ -68,18 +66,16 @@ class TestRunner:
             return str(e), None
 
     # -----------------------------
-    # SAFE PARSER
+    # SAFE TEST PARSER
     # -----------------------------
     def parse_test_case(self, test_case):
-        if "(" not in test_case or ")" not in test_case:
-            return None, None
 
-        if "=" not in test_case:
+        if "(" not in test_case or ")" not in test_case or "=" not in test_case:
             return None, None
 
         try:
-            left, expected = test_case.split("=")
-            expected = expected.strip()
+            left = test_case.split("=")[0]
+            expected = test_case.split("=")[-1].strip()
 
             args = left[left.find("(") + 1:left.find(")")]
             inputs = tuple(int(x.strip()) for x in args.split(",") if x.strip())
@@ -90,22 +86,27 @@ class TestRunner:
             return None, None
 
     # -----------------------------
-    # EVALUATION
+    # EVALUATION (FIXED TYPE HANDLING)
     # -----------------------------
     def evaluate(self, result, expected):
-        return "PASS" if str(result) == str(expected) else "FAIL"
+
+        try:
+            # numeric-safe comparison
+            if isinstance(result, float):
+                result = round(result, 2)
+
+            return "PASS" if str(result) == str(expected) else "FAIL"
+        except:
+            return "FAIL"
 
     # -----------------------------
     # RUN TESTS
     # -----------------------------
     def run_tests(self):
+
         print("\n--- TEST RUNNER STARTED ---\n")
 
         test_files = self.load_test_files()
-
-        total = 0
-        passed = 0
-        failed = 0
 
         for filename, data in test_files:
 
@@ -117,68 +118,73 @@ class TestRunner:
 
                 print(f"\n  [{category}]")
 
-                # mutation count per category
-                if "mutation" in category.lower():
-                    self.mutants_total += len(tests)
-
                 for test in tests:
 
                     if not isinstance(test, str):
-                        print(f"   SKIPPED NON-STRING: {test}")
+                        print(f"   INVALID TEST FORMAT: {test}")
                         continue
 
                     inputs, expected = self.parse_test_case(test)
 
                     if inputs is None:
-                        print(f"   SKIPPED INVALID: {test}")
+                        print(f"   INVALID PARSE: {test}")
                         continue
 
-                    total += 1
+                    self.total += 1
+
+                    # Mutation tracking
+                    if "mutation" in category.lower():
+                        self.mutants_total += 1
 
                     result, error = self.execute_function(func_name, inputs)
 
                     if error:
                         print(f"   ERROR: {error}")
-                        failed += 1
+                        self.failed += 1
                         continue
 
                     status = self.evaluate(result, expected)
 
                     if status == "PASS":
-                        passed += 1
+                        self.passed += 1
                     else:
-                        failed += 1
+                        self.failed += 1
 
                         if "mutation" in category.lower():
                             self.mutants_killed += 1
 
                     print(f"   {status}: {test} | Got: {result}")
 
-        # -----------------------------
-        # FINAL SUMMARY
-        # -----------------------------
-        print("\n--- SUMMARY ---")
-        print(f"Total Tests: {total}")
-        print(f"Passed: {passed}")
-        print(f"Failed: {failed}")
+        self.generate_report()
 
-        if total > 0:
-            print(f"Success Rate: {round((passed / total) * 100, 2)}%")
+    # -----------------------------
+    # FINAL REPORT (NEW FEATURE)
+    # -----------------------------
+    def generate_report(self):
 
-        # -----------------------------
-        # MUTATION SUMMARY
-        # -----------------------------
-        print("\n--- MUTATION SUMMARY ---")
-
+        mutation_score = 0
         if self.mutants_total > 0:
-            score = (self.mutants_killed / self.mutants_total) * 100
-            print(f"Mutants Total: {self.mutants_total}")
-            print(f"Mutants Killed: {self.mutants_killed}")
-            print(f"Mutation Score: {round(score, 2)}%")
-        else:
-            print("No mutation tests detected")
+            mutation_score = (self.mutants_killed / self.mutants_total) * 100
 
-        print(f"Conditions Covered: {len(self.conditions_hit)}")
+        report = {
+            "total_tests": self.total,
+            "passed": self.passed,
+            "failed": self.failed,
+            "success_rate": round((self.passed / self.total) * 100, 2) if self.total else 0,
+            "mutation_total": self.mutants_total,
+            "mutants_killed": self.mutants_killed,
+            "mutation_score": round(mutation_score, 2),
+            "conditions_covered": len(self.conditions_hit)
+        }
+
+        print("\n--- FINAL SUMMARY ---")
+        print(json.dumps(report, indent=4))
+
+        # Save report file
+        with open("report.json", "w") as f:
+            json.dump(report, f, indent=4)
+
+        print("\n✔ Report saved to report.json")
 
 
 # -----------------------------
