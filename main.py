@@ -10,14 +10,14 @@ class SoftwareTestingTool:
         self.excluded_dirs = {'.git', '__pycache__', 'node_modules', 'venv'}
 
     def _load_context(self, context_file):
-        """Loads the detailed specifications from context.json."""
+        """Loads specification/context data if available."""
         if os.path.exists(context_file):
             with open(context_file, 'r', encoding="utf-8") as f:
                 return json.load(f)
         return {}
 
     def get_source_code(self):
-        """Recursively finds and parses code from the artifact under study."""
+        """Recursively scans project and extracts Python code."""
         extracted_data = []
 
         for root, dirs, files in os.walk(self.target_path):
@@ -31,17 +31,17 @@ class SoftwareTestingTool:
         return extracted_data
 
     def _parse_file(self, file_path):
-        """Extracts functions/classes for LLM analysis."""
+        """Extract classes and functions using AST."""
 
         with open(file_path, "r", encoding="utf-8") as f:
             source_code = f.read()
-            tree = ast.parse(source_code)
 
+        tree = ast.parse(source_code)
         nodes = []
 
         for node in ast.iter_child_nodes(tree):
 
-            # Handle classes
+            # CLASS HANDLING
             if isinstance(node, ast.ClassDef):
                 class_name = node.name
 
@@ -54,7 +54,7 @@ class SoftwareTestingTool:
                             "code": ast.get_source_segment(source_code, sub_node)
                         })
 
-            # Handle standalone functions
+            # FUNCTION HANDLING
             elif isinstance(node, ast.FunctionDef):
                 nodes.append({
                     "class": None,
@@ -66,30 +66,30 @@ class SoftwareTestingTool:
         return {"file": file_path, "content": nodes}
 
     def generate_test_prompt(self, code_snippet, requirement):
-        """Creates LLM prompt for test generation."""
+        """Creates prompt for LLM or mock generator."""
 
-        prompt = f"""
+        return f"""
 You are a software testing expert.
 
 Analyze the following code:
 {code_snippet}
 
-Based on this requirement:
+Requirement:
 {requirement}
 
-Generate a complete test suite including:
-
-1. Whitebox Testing:
-   - Statement Coverage
-   - Condition Coverage
-
-2. Blackbox Testing:
-   - Equivalence Class Partitioning (ECP)
-   - Boundary Value Analysis (BVA)
+Generate test cases including:
+1. Whitebox Testing (statement + condition coverage)
+2. Blackbox Testing (ECP + BVA)
 
 Return structured test cases with inputs and expected outputs.
 """
-        return prompt
+
+    # export results for reports
+    def export_results(self, data, output_file="analysis_output.json"):
+        """Saves extracted structure to JSON file."""
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+        print(f"\n[✔] Results saved to {output_file}")
 
 
 if __name__ == "__main__":
@@ -108,3 +108,6 @@ if __name__ == "__main__":
             print(f"  - {item['type']}: {item['name']} (Class: {item['class']})")
 
     print(f"\nTotal Extracted Nodes: {total_nodes}")
+
+    # Final
+    tool.export_results(results)
