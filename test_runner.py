@@ -9,7 +9,7 @@ class TestRunner:
         self.calc = SimpleCalculator()
 
     def load_test_files(self):
-        """Recursively load all JSON test files from Test_Folder"""
+        """Load all JSON test files recursively from Test_Folder"""
         test_files = []
 
         for root, _, files in os.walk(self.test_folder):
@@ -17,21 +17,21 @@ class TestRunner:
                 if file.endswith(".json"):
                     path = os.path.join(root, file)
 
-                    with open(path, "r", encoding="utf-8") as f:
-                        try:
+                    try:
+                        with open(path, "r", encoding="utf-8") as f:
                             data = json.load(f)
                             test_files.append((file, data))
-                        except json.JSONDecodeError:
-                            print(f"[!] Skipping invalid JSON: {file}")
+                    except json.JSONDecodeError:
+                        print(f"[!] Skipping invalid JSON: {file}")
 
         return test_files
 
     def extract_function_name(self, filename):
-        """Infer function name from file"""
+        """Infer function name from filename"""
         return filename.replace("_tests.json", "").replace(".json", "")
 
     def execute_function(self, func_name, inputs):
-        """Call function dynamically from SimpleCalculator"""
+        """Dynamically call function from SimpleCalculator"""
         func = getattr(self.calc, func_name, None)
 
         if not func:
@@ -45,11 +45,10 @@ class TestRunner:
 
     def parse_test_case(self, test_case):
         """
-        Converts test case string like:
+        Convert:
         add(2,3)=5
         into:
-        inputs = (2,3)
-        expected = 5
+        inputs=(2,3), expected=5
         """
 
         if "=" not in test_case:
@@ -60,63 +59,100 @@ class TestRunner:
 
         try:
             args = left[left.find("(") + 1:left.find(")")]
-            inputs = tuple(eval(arg.strip()) for arg in args.split(",") if arg.strip() != "")
+            inputs = tuple(
+                eval(arg.strip())
+                for arg in args.split(",")
+                if arg.strip() != ""
+            )
             return inputs, expected
         except Exception:
             return None, None
+
+    def evaluate(self, result, expected):
+        """Return PASS or FAIL"""
+        if str(result) == str(expected):
+            return "PASS"
+        return "FAIL"
+
+    def save_report(self, report, filename="test_report.json"):
+        """Save final report"""
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(report, f, indent=4)
+
+        print(f"\n[✔] Report saved to {filename}")
 
     def run_tests(self):
         print("\n--- TEST RUNNER STARTED ---\n")
 
         test_files = self.load_test_files()
 
-        total = 0
-        passed = 0
-        failed = 0
+        report = {
+            "total": 0,
+            "passed": 0,
+            "failed": 0,
+            "tests": []
+        }
 
         for filename, data in test_files:
 
             func_name = self.extract_function_name(filename)
 
-            print(f"\n📄 File: {filename} → Function: {func_name}")
+            print(f"\nFile: {filename} → Function: {func_name}")
 
             for category, tests in data.items():
 
-                print(f"\n  [{category.upper()}]")
+                print(f"\n  [{category}]")
 
                 for test in tests:
-                    total += 1
+                    report["total"] += 1
 
-                    # Only process string-style tests
                     if isinstance(test, str) and "=" in test:
+
                         inputs, expected = self.parse_test_case(test)
 
                         if inputs is None:
-                            print(f"   ⚠ Skipped invalid test: {test}")
+                            print(f"   SKIPPED: {test}")
                             continue
 
                         result, error = self.execute_function(func_name, inputs)
 
                         if error:
-                            print(f" ERROR: {error}")
-                            failed += 1
-                            continue
-
-                        if str(result) == expected:
-                            print(f"   ✔ PASS: {test}")
-                            passed += 1
+                            status = "FAIL"
+                            print(f"   ERROR: {error}")
+                            report["failed"] += 1
                         else:
-                            print(f" FAIL: {test} | Got: {result}")
-                            failed += 1
+                            status = self.evaluate(result, expected)
+
+                            if status == "PASS":
+                                report["passed"] += 1
+                            else:
+                                report["failed"] += 1
+
+                            print(f"   {status}: {test} | Got: {result}")
+
+                        report["tests"].append({
+                            "function": func_name,
+                            "test": test,
+                            "expected": expected,
+                            "actual": result,
+                            "status": status
+                        })
 
                     else:
-                        print(f"   ⚠ Unsupported test format: {test}")
+                        print(f"   SKIPPED INVALID FORMAT: {test}")
 
+        # Summary
         print("\n--- SUMMARY ---")
-        print(f"Total Tests: {total}")
-        print(f"Passed: {passed}")
-        print(f"Failed: {failed}")
-        print(f"Success Rate: {round((passed/total)*100, 2) if total else 0}%\n")
+        print(f"Total Tests: {report['total']}")
+        print(f"Passed: {report['passed']}")
+        print(f"Failed: {report['failed']}")
+
+        if report["total"] > 0:
+            rate = (report["passed"] / report["total"]) * 100
+            print(f"Success Rate: {round(rate, 2)}%")
+
+        # Save report
+        self.save_report(report)
 
 
 if __name__ == "__main__":
