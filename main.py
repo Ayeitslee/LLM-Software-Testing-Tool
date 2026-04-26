@@ -5,20 +5,11 @@ from llm_engine import generate_tests
 
 
 class SoftwareTestingTool:
-    def __init__(self, target_path, context_file="context.json"):
+    def __init__(self, target_path):
         self.target_path = target_path
-        self.context_data = self._load_context(context_file)
         self.excluded_dirs = {'.git', '__pycache__', 'node_modules', 'venv'}
 
-    def _load_context(self, context_file):
-        """Loads specification/context data if available."""
-        if os.path.exists(context_file):
-            with open(context_file, 'r', encoding="utf-8") as f:
-                return json.load(f)
-        return {}
-
     def get_source_code(self):
-        """Recursively scans project and extracts Python code."""
         extracted_data = []
 
         for root, dirs, files in os.walk(self.target_path):
@@ -32,8 +23,6 @@ class SoftwareTestingTool:
         return extracted_data
 
     def _parse_file(self, file_path):
-        """Extract classes and functions using AST."""
-
         with open(file_path, "r", encoding="utf-8") as f:
             source_code = f.read()
 
@@ -42,75 +31,85 @@ class SoftwareTestingTool:
 
         for node in ast.iter_child_nodes(tree):
 
-            # CLASS HANDLING
+            # Classes + methods
             if isinstance(node, ast.ClassDef):
-                class_name = node.name
-
-                for sub_node in node.body:
-                    if isinstance(sub_node, ast.FunctionDef):
+                for sub in node.body:
+                    if isinstance(sub, ast.FunctionDef):
                         nodes.append({
-                            "class": class_name,
-                            "name": sub_node.name,
-                            "type": "Method",
-                            "code": ast.get_source_segment(source_code, sub_node)
+                            "class": node.name,
+                            "name": sub.name,
+                            "code": ast.get_source_segment(source_code, sub)
                         })
 
-            # FUNCTION HANDLING
+            # Standalone functions
             elif isinstance(node, ast.FunctionDef):
                 nodes.append({
                     "class": None,
                     "name": node.name,
-                    "type": "Function",
                     "code": ast.get_source_segment(source_code, node)
                 })
 
         return {"file": file_path, "content": nodes}
 
-    def export_results(self, data, output_file="analysis_output.json"):
-        """Save extracted structure to JSON."""
-        with open(output_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
-        print(f"\n[✔] Analysis saved to {output_file}")
+
+# ===================== SAVE TESTS =====================
+
+def save_tests(function_name, tests):
+    base = "Test_Folder"
+
+    # Required structure (rubric compliant)
+    structure = {
+        "whitebox": ["statement", "condition", "block", "path"],
+        "blackbox": ["bva", "ecp", "mutation"]
+    }
+
+    for main, subs in structure.items():
+        for sub in subs:
+            os.makedirs(f"{base}/{main}/{sub}", exist_ok=True)
+
+    # Map test types to folders
+    mapping = {
+        "statement": "whitebox/statement",
+        "condition": "whitebox/condition",
+        "block": "whitebox/block",
+        "path": "whitebox/path",
+        "bva": "blackbox/bva",
+        "ecp": "blackbox/ecp",
+        "mutation": "blackbox/mutation"
+    }
+
+    # Save tests into correct folders
+    for test_type, folder in mapping.items():
+        file_path = f"{base}/{folder}/{function_name}_tests.json"
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump({test_type: tests.get(test_type, [])}, f, indent=4)
 
 
-# ================= MAIN EXECUTION =================
+# ===================== MAIN EXECUTION =====================
 
 if __name__ == "__main__":
-    tool = SoftwareTestingTool(target_path="./")
+    tool = SoftwareTestingTool("./")
 
-    print("\n--- Starting Recursive Code Analysis ---")
+    print("\n--- STARTING CODE ANALYSIS ---")
+
     results = tool.get_source_code()
 
-    total_nodes = 0
-
-    # Create test folder
-    os.makedirs("Test_Folder", exist_ok=True)
+    total_functions = 0
 
     for file in results:
         print(f"\nFile: {file['file']}")
 
         for item in file["content"]:
-            total_nodes += 1
+            total_functions += 1
 
             print(f"\nFunction: {item['name']} (Class: {item['class']})")
 
-            # CALL LLM ENGINE
+            # Generate tests using LLM engine (mock or real)
             tests = generate_tests(item["code"], item["name"])
 
-            print("\n--- GENERATED TESTS ---")
-            print("WHITEBOX:", tests["whitebox"])
-            print("BLACKBOX:", tests["blackbox"])
-            print("BVA:", tests["bva"])
-            print("ECP:", tests["ecp"])
+            # Save structured outputs
+            save_tests(item["name"], tests)
 
-            # SAVE TESTS TO FILE
-            safe_name = item["name"]
-            file_path = f"Test_Folder/{safe_name}_tests.json"
-
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(tests, f, indent=4)
-
-    print(f"\nTotal Extracted Nodes: {total_nodes}")
-
-    # Save full analysis
-    tool.export_results(results)
+    print(f"\n✔ Analysis complete. Total functions processed: {total_functions}")
+    print("✔ Test cases generated in Test_Folder/")
