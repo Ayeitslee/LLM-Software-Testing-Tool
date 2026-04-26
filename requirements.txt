@@ -1,6 +1,6 @@
 # Software Testing Tool (LLM Simulation Project)
 
-# No external dependencies required for core system
+#Core System has no external dependencies
 
 # Optional (only if using real LLM APIs):
 # openai
