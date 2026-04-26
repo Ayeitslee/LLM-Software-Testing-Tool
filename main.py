@@ -1,6 +1,7 @@
 import os
 import ast
 import json
+from llm_engine import generate_tests
 
 
 class SoftwareTestingTool:
@@ -65,32 +66,14 @@ class SoftwareTestingTool:
 
         return {"file": file_path, "content": nodes}
 
-    def generate_test_prompt(self, code_snippet, requirement):
-        """Creates prompt for LLM or mock generator."""
-
-        return f"""
-You are a software testing expert.
-
-Analyze the following code:
-{code_snippet}
-
-Requirement:
-{requirement}
-
-Generate test cases including:
-1. Whitebox Testing (statement + condition coverage)
-2. Blackbox Testing (ECP + BVA)
-
-Return structured test cases with inputs and expected outputs.
-"""
-
-    # export results for reports
     def export_results(self, data, output_file="analysis_output.json"):
-        """Saves extracted structure to JSON file."""
+        """Save extracted structure to JSON."""
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
-        print(f"\n[✔] Results saved to {output_file}")
+        print(f"\n[✔] Analysis saved to {output_file}")
 
+
+# ================= MAIN EXECUTION =================
 
 if __name__ == "__main__":
     tool = SoftwareTestingTool(target_path="./")
@@ -100,14 +83,34 @@ if __name__ == "__main__":
 
     total_nodes = 0
 
+    # Create test folder
+    os.makedirs("Test_Folder", exist_ok=True)
+
     for file in results:
         print(f"\nFile: {file['file']}")
 
         for item in file["content"]:
             total_nodes += 1
-            print(f"  - {item['type']}: {item['name']} (Class: {item['class']})")
+
+            print(f"\nFunction: {item['name']} (Class: {item['class']})")
+
+            # CALL LLM ENGINE
+            tests = generate_tests(item["code"], item["name"])
+
+            print("\n--- GENERATED TESTS ---")
+            print("WHITEBOX:", tests["whitebox"])
+            print("BLACKBOX:", tests["blackbox"])
+            print("BVA:", tests["bva"])
+            print("ECP:", tests["ecp"])
+
+            # SAVE TESTS TO FILE
+            safe_name = item["name"]
+            file_path = f"Test_Folder/{safe_name}_tests.json"
+
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(tests, f, indent=4)
 
     print(f"\nTotal Extracted Nodes: {total_nodes}")
 
-    # Final
+    # Save full analysis
     tool.export_results(results)
