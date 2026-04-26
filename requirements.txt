@@ -1,2 +1,8 @@
 # Software Testing Tool (LLM Simulation Project)
-# No external dependencies required
+
+# No external dependencies required for core system
+
+# Optional (only if using real LLM APIs):
+# openai
+# anthropic
+# python-dotenv
