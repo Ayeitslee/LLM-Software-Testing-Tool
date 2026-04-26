@@ -7,10 +7,8 @@ class SimpleCalculator:
     def add(self, a, b):
         return a + b
 
-    def divide(self, numerator, denominator):
-        if denominator == 0:
-            return "Error: Division by zero"
-        return numerator / denominator
+  def multiply(self, a, b):
+    return a + b  #wrong logic
 
     def calculate_discount(self, price, discount_percent):
         # Good for BVA (0, 100, and negative numbers)
