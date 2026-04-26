@@ -30,41 +30,40 @@ class SoftwareTestingTool:
 
         return extracted_data
 
-  def _parse_file(self, file_path):
-    """Extracts functions/classes for LLM analysis."""
+    def _parse_file(self, file_path):
+        """Extracts functions/classes for LLM analysis."""
 
-    with open(file_path, "r", encoding="utf-8") as f:
-        source_code = f.read()
-        tree = ast.parse(source_code)
+        with open(file_path, "r", encoding="utf-8") as f:
+            source_code = f.read()
+            tree = ast.parse(source_code)
 
-    nodes = []
+        nodes = []
 
-    for node in ast.iter_child_nodes(tree):
+        for node in ast.iter_child_nodes(tree):
 
-        # Handle classes
-        if isinstance(node, ast.ClassDef):
-            class_name = node.name
+            # Handle classes
+            if isinstance(node, ast.ClassDef):
+                class_name = node.name
 
-            for sub_node in node.body:
-                if isinstance(sub_node, ast.FunctionDef):
-                    nodes.append({
-                        "class": class_name,
-                        "name": sub_node.name,
-                        "type": "Method",
-                        "code": ast.get_source_segment(source_code, sub_node)
-                    })
+                for sub_node in node.body:
+                    if isinstance(sub_node, ast.FunctionDef):
+                        nodes.append({
+                            "class": class_name,
+                            "name": sub_node.name,
+                            "type": "Method",
+                            "code": ast.get_source_segment(source_code, sub_node)
+                        })
 
-        # Handle standalone functions (ONLY top-level)
-        elif isinstance(node, ast.FunctionDef):
-            nodes.append({
-                "class": None,
-                "name": node.name,
-                "type": "Function",
-                "code": ast.get_source_segment(source_code, node)
-            })
+            # Handle standalone functions
+            elif isinstance(node, ast.FunctionDef):
+                nodes.append({
+                    "class": None,
+                    "name": node.name,
+                    "type": "Function",
+                    "code": ast.get_source_segment(source_code, node)
+                })
 
-    return {"file": file_path, "content": nodes}
-
+        return {"file": file_path, "content": nodes}
 
     def generate_test_prompt(self, code_snippet, requirement):
         """Creates LLM prompt for test generation."""
