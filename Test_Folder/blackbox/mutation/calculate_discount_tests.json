@@ -1,3 +1,7 @@
 {
-    "mutation": []
+    "mutation": [
+        "Replaced > with <",
+        "Replaced + with -",
+        "Replaced == with !="
+    ]
 }
