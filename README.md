@@ -29,6 +29,11 @@ Generates automation files (GitHub Actions YAML) for integrating tests into deve
 
 ---
 
+Mutation Testing Note
+
+Mutation testing in this system is simulated by generating operator-level mutations. These are used to estimate fault detection capability of the generated test suite.
+
+---
 ## Installation
 
 1. Clone this repository to your local machine  
