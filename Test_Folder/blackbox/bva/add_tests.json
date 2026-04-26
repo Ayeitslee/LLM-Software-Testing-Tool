@@ -1,6 +1,6 @@
 {
     "bva": [
-        "0 boundary",
-        "large numbers"
+        "add(0,1)=1",
+        "add(999,1)=1000"
     ]
 }

@@ -1,6 +1,6 @@
 {
     "bva": [
-        "denominator=1",
-        "denominator=0"
+        "divide(1,1)=1",
+        "divide(10,1)=10"
     ]
 }

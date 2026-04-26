@@ -1,6 +1,6 @@
 {
     "ecp": [
-        "valid class",
-        "invalid class"
+        "calculate_discount(200,10)=20",
+        "calculate_discount(200,-5)=error"
     ]
 }

@@ -1,6 +1,6 @@
 {
     "ecp": [
-        "valid numbers",
-        "invalid zero case"
+        "divide(8,2)=4",
+        "divide(7,0)=error"
     ]
 }

@@ -40,7 +40,7 @@ class TestRunner:
         return filename.replace("_tests.json", "").replace(".json", "")
 
     # -----------------------------
-    # EXECUTE FUNCTION (FIXED ORDER)
+    # EXECUTE FUNCTION
     # -----------------------------
     def execute_function(self, func_name, inputs):
         func = getattr(self.calc, func_name, None)
@@ -48,7 +48,7 @@ class TestRunner:
         if not func:
             return None, f"Function {func_name} not found"
 
-        # WHITEBOX CONDITION TRACKING (SAFE)
+        # whitebox tracking
         if func_name == "divide":
             if len(inputs) > 1:
                 if inputs[1] == 0:
@@ -68,10 +68,9 @@ class TestRunner:
             return str(e), None
 
     # -----------------------------
-    # SAFE TEST PARSER
+    # SAFE PARSER
     # -----------------------------
     def parse_test_case(self, test_case):
-
         if "(" not in test_case or ")" not in test_case:
             return None, None
 
@@ -79,13 +78,11 @@ class TestRunner:
             return None, None
 
         try:
-            left = test_case.split("=")[0]
-            expected = test_case.split("=")[-1].strip()
+            left, expected = test_case.split("=")
+            expected = expected.strip()
 
             args = left[left.find("(") + 1:left.find(")")]
-            inputs = tuple(
-                int(x.strip()) for x in args.split(",") if x.strip()
-            )
+            inputs = tuple(int(x.strip()) for x in args.split(",") if x.strip())
 
             return inputs, expected
 
@@ -93,13 +90,10 @@ class TestRunner:
             return None, None
 
     # -----------------------------
-    # EVALUATION (FIXED)
+    # EVALUATION
     # -----------------------------
     def evaluate(self, result, expected):
-
-        is_fail = str(result) != str(expected)
-
-        return "FAIL" if is_fail else "PASS"
+        return "PASS" if str(result) == str(expected) else "FAIL"
 
     # -----------------------------
     # RUN TESTS
@@ -123,6 +117,10 @@ class TestRunner:
 
                 print(f"\n  [{category}]")
 
+                # mutation count per category
+                if "mutation" in category.lower():
+                    self.mutants_total += len(tests)
+
                 for test in tests:
 
                     if not isinstance(test, str):
@@ -136,10 +134,6 @@ class TestRunner:
                         continue
 
                     total += 1
-
-                    # MUTATION TRACKING (FIXED)
-                    if "mutation" in category.lower():
-                        self.mutants_total += 1
 
                     result, error = self.execute_function(func_name, inputs)
 
@@ -161,7 +155,7 @@ class TestRunner:
                     print(f"   {status}: {test} | Got: {result}")
 
         # -----------------------------
-        # FINAL REPORT
+        # FINAL SUMMARY
         # -----------------------------
         print("\n--- SUMMARY ---")
         print(f"Total Tests: {total}")
@@ -171,9 +165,18 @@ class TestRunner:
         if total > 0:
             print(f"Success Rate: {round((passed / total) * 100, 2)}%")
 
+        # -----------------------------
+        # MUTATION SUMMARY
+        # -----------------------------
+        print("\n--- MUTATION SUMMARY ---")
+
         if self.mutants_total > 0:
             score = (self.mutants_killed / self.mutants_total) * 100
+            print(f"Mutants Total: {self.mutants_total}")
+            print(f"Mutants Killed: {self.mutants_killed}")
             print(f"Mutation Score: {round(score, 2)}%")
+        else:
+            print("No mutation tests detected")
 
         print(f"Conditions Covered: {len(self.conditions_hit)}")
 

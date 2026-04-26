@@ -1,5 +1,6 @@
 {
     "bva": [
-        "0%,100%,101%"
+        "calculate_discount(100,0)=0",
+        "calculate_discount(100,100)=100"
     ]
 }

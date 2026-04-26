@@ -1,6 +1,6 @@
 {
     "ecp": [
-        "positive class",
-        "negative class"
+        "add(5,5)=10",
+        "add(-5,-5)=-10"
     ]
 }
