@@ -1,0 +1,7 @@
+{
+    "mutation": [
+        "mutant: > -> <",
+        "mutant: + -> -",
+        "mutant: == -> !="
+    ]
+}
